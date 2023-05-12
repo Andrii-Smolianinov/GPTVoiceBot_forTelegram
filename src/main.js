@@ -1,9 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
-import config from "config";
 import { ogg } from "./ogg.js";
+import { openai } from "./openai.js";
 
-const bot = new Telegraf(config.get("TELEGRAM_TOKEN"));
+const { TELEGRAM_TOKEN } = process.env;
+const bot = new Telegraf(TELEGRAM_TOKEN);
 
 bot.on(message("voice"), async (context) => {
   try {
@@ -13,6 +16,10 @@ bot.on(message("voice"), async (context) => {
     const userId = String(context.message.from.id);
     const oggPath = await ogg.create(link.href, userId);
     const mp3Path = await ogg.toMp3(oggPath, userId);
+
+    const text = await openai.transcription(mp3Path);
+    const response = await openai.chat(text);
+
     await context.reply(mp3Path);
   } catch (error) {
     console.log("Error voice message", error.message);
